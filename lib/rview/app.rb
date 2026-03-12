@@ -12,6 +12,10 @@ module Rview
 
     def self.run(argv = [])
       repo_path = argv.first || Dir.pwd
+      unless File.directory?(File.join(repo_path, '.git'))
+        warn "rview: '#{repo_path}' non è un repository git"
+        exit 1
+      end
       app = new(repo_path: repo_path)
       Bubbletea.run(app)
     end
