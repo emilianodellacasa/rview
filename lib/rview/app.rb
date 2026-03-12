@@ -16,6 +16,7 @@ module Rview
         warn "rview: '#{repo_path}' non è un repository git"
         exit 1
       end
+      system('tput reset')
       app = new(repo_path: repo_path)
       Bubbletea.run(app)
     end
