@@ -1,0 +1,32 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 4.0
+  Exclude:
+    - "bin/**/*"
+    - "vendor/**/*"
+
+Metrics/MethodLength:
+  Max: 30
+
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/AbcSize:
+  Max: 30
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+Metrics/PerceivedComplexity:
+  Max: 10
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "Rakefile"
+
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 120

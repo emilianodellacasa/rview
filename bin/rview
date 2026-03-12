@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+ENV.delete('BUNDLE_GEMFILE')
+ENV.delete('BUNDLE_BIN_PATH')
+ENV.delete('RUBYOPT')
+
+gem 'rview'
+require 'rview'
+
+Rview::App.run(ARGV)
