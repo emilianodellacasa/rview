@@ -35,9 +35,10 @@ module Rview
       end
 
       def set_diff(filename, colorized_lines)
+        @scroll_offset = 0 if filename != @filename
         @filename = filename
         @lines = colorized_lines
-        @scroll_offset = 0
+        clamp_scroll
       end
 
       def scroll_down(lines = 1)
