@@ -1,89 +1,94 @@
 # rview
 
-Un TUI (Terminal User Interface) in tempo reale per visualizzare le modifiche Git nel tuo repository, con evidenziazione della sintassi e navigazione da tastiera.
+A real-time TUI (Terminal User Interface) for viewing Git changes in your repository, with syntax highlighting and keyboard navigation.
 
-## Funzionalità
+## Features
 
-- Aggiornamento automatico della lista file al salvataggio (tramite `listen`)
-- Visualizzazione del diff colorato per ogni file modificato
-- Navigazione da tastiera e supporto mouse
-- Layout a due pannelli: lista file | diff
-- Tema colori Catppuccin Mocha
+- Real-time refresh of file list and diff on every tick
+- Colorized diff view for each modified file
+- Keyboard navigation and mouse support
+- Two-panel layout: file list | diff
+- Catppuccin Mocha color theme
 
-## Requisiti
+## Requirements
 
-- Ruby 4.0+
+- Ruby 3.4+
 - Git
 
-## Installazione
+## Installation
 
 ```bash
-git clone https://github.com/tuoutente/rview
+git clone https://github.com/yourusername/rview
 cd rview
 bundle install
+gem build rview.gemspec
+gem install ./rview-0.1.0.gem
 ```
 
-## Utilizzo
+## Usage
 
-Avvia `rview` dalla root del repository Git che vuoi monitorare:
+Run `rview` from any directory:
 
 ```bash
-# Monitora la directory corrente
-bundle exec bin/rview
+# Monitor the current directory
+rview
 
-# Oppure specifica un percorso
-bundle exec bin/rview /path/to/repo
+# Or specify a path
+rview /path/to/repo
 ```
 
-## Tasti
+Must be run inside a Git repository, otherwise it will exit with an error.
 
-| Tasto | Azione |
-|-------|--------|
-| `j` / `↓` | File successivo (o scorri giù nel diff) |
-| `k` / `↑` | File precedente (o scorri su nel diff) |
-| `enter` | Passa il focus al pannello diff |
-| `tab` | Alterna il focus tra lista file e diff |
-| `q` / `ctrl+c` | Esci |
+## Keybindings
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Next file (or scroll down in diff) |
+| `k` / `↑` | Previous file (or scroll up in diff) |
+| `enter` | Move focus to diff panel |
+| `tab` | Toggle focus between file list and diff |
+| `r` | Force refresh |
+| `q` / `ctrl+c` | Quit |
 
 ## Layout
 
 ```
-┌─────────────────┬──────────────────────────────────────┐
-│  Lista file     │  Diff del file selezionato           │
-│                 │                                      │
-│ > M lib/app.rb  │  diff --git a/lib/app.rb ...         │
-│   A new_file.rb │  @@ -1,3 +1,5 @@                    │
-│   D old.rb      │   context line                       │
-│                 │  +added line                         │
-│                 │  -removed line                       │
-└─────────────────┴──────────────────────────────────────┘
-  j/k: navigate  enter: select  tab: switch panel  q: quit
+╭─────────────────╮╭──────────────────────────────────────╮
+│  M lib/app.rb   ││  diff --git a/lib/app.rb ...          │
+│> A new_file.rb  ││  @@ -1,3 +1,5 @@                     │
+│  D old.rb       ││   context line                        │
+│                 ││  +added line                          │
+│                 ││  -removed line                        │
+╰─────────────────╯╰──────────────────────────────────────╯
+╭─────────────────────────────────────────────────────────╮
+│ ↑/↓ j/k  navigate │ tab  switch panel │ r  refresh │ q  quit │
+╰─────────────────────────────────────────────────────────╯
 ```
 
-### Indicatori di stato
+### Status indicators
 
-| Simbolo | Significato |
-|---------|-------------|
-| `M` | Modificato |
-| `A` | Aggiunto (staged) |
-| `D` | Eliminato |
-| `R` | Rinominato |
+| Symbol | Meaning |
+|--------|---------|
+| `M` | Modified |
+| `A` | Added (staged) |
+| `D` | Deleted |
+| `R` | Renamed |
 | `?` | Untracked |
-| `U` | Conflitto di merge |
+| `U` | Merge conflict |
 
-## Sviluppo
+## Development
 
 ```bash
-# Esegui i test
+# Run tests
 bundle exec rspec
 
-# Esegui il linter
+# Run linter
 bundle exec rubocop
 
-# Esegui entrambi
+# Run both
 bundle exec rake
 ```
 
-## Licenza
+## License
 
-Vedi [LICENSE](LICENSE).
+See [LICENSE](LICENSE).
