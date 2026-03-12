@@ -73,7 +73,7 @@ module Rview
       def truncate_line(line)
         return line if line.length <= @width
 
-        line[0, @width - 1] + '…'
+        "#{line[0, @width - 1]}…"
       end
 
       def colorize_line(line, style)

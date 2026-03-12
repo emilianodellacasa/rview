@@ -105,10 +105,8 @@ module Rview
           @file_list.blur
           @diff_view.focus
         end
-        [self, nil]
-      else
-        [self, nil]
       end
+      [self, nil]
     end
 
     def handle_mouse(_msg)
@@ -189,21 +187,21 @@ module Rview
 
     def status_bar_style
       Lipgloss::Style.new
-        .border(:rounded)
-        .border_foreground(Styles::TEAL)
-        .foreground(Styles::SUBTEXT0)
-        .width(@width - 2)
-        .height(1)
+                     .border(:rounded)
+                     .border_foreground(Styles::TEAL)
+                     .foreground(Styles::SUBTEXT0)
+                     .width(@width - 2)
+                     .height(1)
     end
 
     def box_style(focused:, width:, height:)
       border_color = focused ? Styles::MAUVE : Styles::OVERLAY1
       Lipgloss::Style.new
-        .border(:rounded)
-        .border_foreground(border_color)
-        .width(width)
-        .height(height)
-        .max_height(height)
+                     .border(:rounded)
+                     .border_foreground(border_color)
+                     .width(width)
+                     .height(height)
+                     .max_height(height)
     end
   end
 end
