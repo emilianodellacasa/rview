@@ -13,7 +13,7 @@ module Rview
     def self.run(argv = [])
       repo_path = argv.first || Dir.pwd
       unless File.directory?(File.join(repo_path, '.git'))
-        warn "rview: '#{repo_path}' non è un repository git"
+        warn "rview: '#{repo_path}' is not a git repository"
         exit 1
       end
       system('tput reset')
