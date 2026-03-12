@@ -4,10 +4,10 @@ module Rview
   module Components
     class StatusBar
       KEY_HINTS = [
-        ['↑/↓ j/k', 'naviga'],
-        ['tab', 'cambia pannello'],
+        ['↑/↓ j/k', 'navigate'],
+        ['tab', 'switch panel'],
         ['r', 'refresh'],
-        ['q / ctrl+c', 'esci']
+        ['q / ctrl+c', 'quit']
       ].freeze
 
       def initialize

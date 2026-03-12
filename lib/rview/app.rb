@@ -87,18 +87,13 @@ module Rview
       case msg.to_s
       when 'q', 'ctrl+c'
         @watcher.stop
-        [self, Bubbletea.quit]
-      when 'r'
-        [self, nil]
+        return [self, Bubbletea.quit]
       when 'tab'
         toggle_focus
-        [self, nil]
       when 'j', 'down'
         handle_nav_down
-        [self, nil]
       when 'k', 'up'
         handle_nav_up
-        [self, nil]
       when 'enter'
         if @focus == FOCUS_FILE_LIST
           @focus = FOCUS_DIFF_VIEW
