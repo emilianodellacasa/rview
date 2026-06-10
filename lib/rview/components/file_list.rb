@@ -22,11 +22,14 @@ module Rview
         @selected_index = 0
         @focused = false
         @scroll_offset = 0
+        @viewport = Bubbles::Viewport.new(width: width, height: viewport_height)
       end
 
       def resize(width:, height:)
         @width = width
         @height = height
+        @viewport.width = width
+        @viewport.height = viewport_height
         clamp_scroll
       end
 
@@ -69,33 +72,44 @@ module Rview
       def view
         return '(no changes)' if @files.empty?
 
-        visible_files = @files[@scroll_offset, visible_lines] || []
-        lines = visible_files.each_with_index.map do |file_status, idx|
-          actual_idx = idx + @scroll_offset
+        lines = @files.each_with_index.map do |file_status, idx|
           symbol = STATUS_SYMBOLS[file_status.status_code] || ' '
-          prefix = actual_idx == @selected_index ? '> ' : '  '
-          "#{prefix}#{symbol} #{file_status.path}"
+          prefix = idx == @selected_index ? '> ' : '  '
+          colorize_entry("#{prefix}#{symbol} #{file_status.path}", file_status.status_code)
         end
 
-        lines.join("\n")
+        @viewport.content = lines.join("\n")
+        @viewport.y_offset = @scroll_offset
+        @viewport.view
       end
 
       private
 
-      def visible_lines
+      def colorize_entry(line, status_code)
+        color = case status_code
+                when 'M'      then Styles::GREEN
+                when 'D'      then Styles::RED
+                when 'A', '?' then Styles::SKY
+                end
+        return line unless color
+
+        Lipgloss::Style.new.foreground(color).render(line)
+      end
+
+      def viewport_height
         [@height - 2, 1].max
       end
 
       def clamp_scroll
         return if @files.empty?
 
-        max_scroll = [@files.length - visible_lines, 0].max
+        max_scroll = [@files.length - viewport_height, 0].max
         @scroll_offset = @scroll_offset.clamp(0, max_scroll)
 
         if @selected_index < @scroll_offset
           @scroll_offset = @selected_index
-        elsif @selected_index >= @scroll_offset + visible_lines
-          @scroll_offset = @selected_index - visible_lines + 1
+        elsif @selected_index >= @scroll_offset + viewport_height
+          @scroll_offset = @selected_index - viewport_height + 1
         end
       end
     end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'lipgloss'
+require 'bubbles'
 require_relative 'rview/version'
 require_relative 'rview/messages'
 require_relative 'rview/styles'

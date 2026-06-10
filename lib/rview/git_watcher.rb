@@ -21,7 +21,7 @@ module Rview
       files = fetch_status
       diffs = {}
       files.each do |file_status|
-        diffs[file_status.path] = fetch_diff(file_status.path)
+        diffs[file_status.path] = fetch_diff(file_status)
       end
 
       @mutex.synchronize do
@@ -46,20 +46,36 @@ module Rview
       DiffParser.parse_status(stdout)
     end
 
-    def fetch_diff(path)
-      stdout, _stderr, status = Open3.capture3(
-        'git', 'diff', 'HEAD', '--', path,
-        chdir: @repo_path
-      )
+    def fetch_diff(file_status)
+      path = file_status.path
 
-      if status.success? && !stdout.strip.empty?
-        stdout
-      else
-        stdout2, _stderr2, _status2 = Open3.capture3(
-          'git', 'diff', '--', path,
+      case file_status.status_code
+      when '?'
+        stdout, _stderr, _status = Open3.capture3(
+          'git', 'diff', '--no-index', '/dev/null', path,
           chdir: @repo_path
         )
-        stdout2
+        stdout
+      when 'A'
+        stdout, _stderr, _status = Open3.capture3(
+          'git', 'diff', '--cached', '--', path,
+          chdir: @repo_path
+        )
+        stdout
+      else
+        stdout, _stderr, status = Open3.capture3(
+          'git', 'diff', 'HEAD', '--', path,
+          chdir: @repo_path
+        )
+        if status.success? && !stdout.strip.empty?
+          stdout
+        else
+          stdout2, _stderr2, _status2 = Open3.capture3(
+            'git', 'diff', '--', path,
+            chdir: @repo_path
+          )
+          stdout2
+        end
       end
     end
   end
