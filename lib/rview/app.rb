@@ -31,7 +31,12 @@ module Rview
       @file_list = Components::FileList.new(**left_outer_dims)
       @diff_view = Components::DiffView.new(**right_outer_dims)
       @status_bar = Components::StatusBar.new(width: status_bar_inner_width)
-      @watcher = GitWatcher.new(repo_path)
+      @tooling_box = Components::ToolingBox.new(width: status_bar_inner_width)
+      config = Config.load(repo_path)
+      @tooling_metrics = ToolingMetrics.new(repo_path, config: config)
+      @watcher = GitWatcher.new(repo_path,
+                                report_paths: config.all_tooling_paths,
+                                on_report_change: -> { @tooling_metrics.mark_dirty })
 
       @file_list.focus
     end
@@ -57,33 +62,38 @@ module Rview
     end
 
     def view
+      tooling = tooling_box_style.render(@tooling_box.view)
       left_box = box_style(focused: @focus == FOCUS_FILE_LIST, **left_outer_dims).render(@file_list.view)
       right_box = box_style(focused: @focus == FOCUS_DIFF_VIEW, **right_outer_dims).render(@diff_view.view)
 
       panels = Lipgloss.join_horizontal(:top, left_box, right_box)
       status = status_bar_style.render(@status_bar.view)
-      base = [panels, '', status].join("\n")
+      base = [panels, tooling, status].join("\n")
 
-      @show_info ? overlay_info_modal(base) : base
+      @show_info ? Components::InfoModal.new(width: @width, height: @height).overlay(base) : base
     end
 
     private
 
     def handle_tick
-      result = @watcher.refresh
-      if result
-        files, diffs = result
-        @file_list.update_files(files)
-        selected = @file_list.selected_file
-        if selected
-          diff_content = diffs[selected.path] || ''
-          colorized = DiffParser.colorize(diff_content)
-          @diff_view.set_diff(selected.path, colorized)
-        else
-          @diff_view.set_diff(nil, [])
-        end
-      end
+      @tooling_metrics.mark_dirty if @watcher.fallback_polling?
+      apply_refresh(@watcher.refresh)
+      @tooling_box.metrics = @tooling_metrics.read
       [self, tick_cmd]
+    end
+
+    def apply_refresh(result)
+      return unless result
+
+      files, diffs = result
+      @file_list.update_files(files)
+      selected = @file_list.selected_file
+      if selected
+        diff_content = diffs[selected.path] || ''
+        @diff_view.set_diff(selected.path, DiffParser.colorize(diff_content))
+      else
+        @diff_view.set_diff(nil, [])
+      end
     end
 
     def handle_key(msg)
@@ -98,6 +108,9 @@ module Rview
         return [self, Bubbletea.quit]
       when 'i'
         @show_info = true
+      when 'r'
+        apply_refresh(@watcher.refresh(force: true))
+        @tooling_box.metrics = @tooling_metrics.read(force: true)
       when 'tab'
         toggle_focus
       when 'enter'
@@ -107,20 +120,22 @@ module Rview
           @diff_view.focus
         end
       else
-        if @focus == FOCUS_DIFF_VIEW
-          @diff_view.update(msg)
-        else
-          case msg.to_s
-          when 'j', 'down'
-            @file_list.move_down
-            update_diff_for_selected
-          when 'k', 'up'
-            @file_list.move_up
-            update_diff_for_selected
-          end
-        end
+        handle_navigation_key(msg)
       end
       [self, nil]
+    end
+
+    def handle_navigation_key(msg)
+      return @diff_view.update(msg) if @focus == FOCUS_DIFF_VIEW
+
+      case msg.to_s
+      when 'j', 'down'
+        @file_list.move_down
+        update_diff_for_selected
+      when 'k', 'up'
+        @file_list.move_up
+        update_diff_for_selected
+      end
     end
 
     def handle_mouse(_msg)
@@ -133,6 +148,7 @@ module Rview
       @file_list.resize(**left_outer_dims)
       @diff_view.resize(**right_outer_dims)
       @status_bar.width = status_bar_inner_width
+      @tooling_box.width = status_bar_inner_width
       [self, nil]
     end
 
@@ -170,8 +186,9 @@ module Rview
     end
 
     def box_inner_height
-      # terminal height minus status bar box (3 rows), main box borders (2), separator (1), and bottom margin (1)
-      [@height - 7, 1].max
+      # terminal height minus tooling box (3 rows), status bar box (3 rows),
+      # main box borders (2), and bottom margin (1)
+      [@height - 9, 1].max
     end
 
     def left_outer_dims
@@ -180,42 +197,6 @@ module Rview
 
     def right_outer_dims
       { width: right_outer_width - 2, height: box_inner_height }
-    end
-
-    def overlay_info_modal(base)
-      title   = Lipgloss::Style.new.bold(true).foreground(Styles::MAUVE).render("rview")
-      version = Lipgloss::Style.new.foreground(Styles::SUBTEXT0).render("v#{VERSION}")
-      author  = Lipgloss::Style.new.foreground(Styles::TEXT).render(AUTHOR)
-      url     = Lipgloss::Style.new.foreground(Styles::BLUE).render(HOMEPAGE)
-      hint    = Lipgloss::Style.new.foreground(Styles::OVERLAY1).render("press any key to close")
-
-      modal = Lipgloss::Style.new
-                             .border(:rounded)
-                             .border_foreground(Styles::MAUVE)
-                             .padding(1, 4)
-                             .render([title, version, '', author, url, '', hint].join("\n"))
-
-      modal_lines = modal.split("\n")
-      modal_h = modal_lines.length
-      modal_w = modal_lines.map { |l| Bubbles::ANSI.strip(l).length }.max || 0
-
-      v_pad = [(@height - modal_h) / 2, 0].max
-      h_pad = [(@width - modal_w) / 2, 0].max
-
-      base_lines = base.split("\n")
-      modal_lines.each_with_index do |mline, i|
-        row = v_pad + i
-        next if row >= base_lines.length
-
-        base_line = base_lines[row]
-        base_visual = Bubbles::ANSI.strip(base_line)
-        left_chunk  = base_visual[0, h_pad] || ''
-        right_start = h_pad + modal_w
-        right_chunk = base_visual[right_start..] || ''
-        base_lines[row] = left_chunk + mline + right_chunk
-      end
-
-      base_lines.join("\n")
     end
 
     def status_bar_inner_width
@@ -227,6 +208,15 @@ module Rview
                      .border(:rounded)
                      .border_foreground(Styles::TEAL)
                      .foreground(Styles::SUBTEXT0)
+                     .width(@width - 2)
+                     .height(1)
+    end
+
+    def tooling_box_style
+      Lipgloss::Style.new
+                     .border(:rounded)
+                     .border_foreground(Styles::SAPPHIRE)
+                     .foreground(Styles::TEXT)
                      .width(@width - 2)
                      .height(1)
     end

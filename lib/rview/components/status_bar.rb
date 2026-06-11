@@ -28,7 +28,7 @@ module Rview
 
         right = " rview v#{Rview::VERSION} "
         padding = [@width - left.length - right.length, 0].max
-        left + ' ' * padding + right
+        left + (' ' * padding) + right
       end
     end
   end

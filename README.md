@@ -4,10 +4,11 @@ A real-time TUI (Terminal User Interface) for viewing Git changes in your reposi
 
 ## Features
 
-- Real-time refresh of file list and diff on every tick
+- Event-driven refresh via filesystem watching (listen/inotify): near-zero CPU when idle, changes appear within ~0.5s
 - Colorized diff view for each modified file
 - Keyboard navigation and mouse support
 - Two-panel layout: file list | diff
+- Tooling box with code coverage, code smells and security issues, with trend deltas vs the last recorded value
 - Catppuccin Mocha color theme
 
 ## Requirements
@@ -39,6 +40,8 @@ rview /path/to/repo
 
 Must be run inside a Git repository, otherwise it will exit with an error.
 
+rview watches the filesystem (including `.git` index/HEAD/refs, so staging and commits are picked up too) and only runs `git status`/`git diff` when something actually changed. The tooling reports follow the same rule: they are re-read only when the watcher sees them change. If the watcher cannot start (e.g. inotify watch limit exceeded), it transparently falls back to refreshing on every tick; `r` always forces an immediate refresh of both the git state and the tooling metrics.
+
 ## Keybindings
 
 | Key | Action |
@@ -61,9 +64,41 @@ Must be run inside a Git repository, otherwise it will exit with an error.
 │                 ││  -removed line                        │
 ╰─────────────────╯╰──────────────────────────────────────╯
 ╭─────────────────────────────────────────────────────────╮
+│ Coverage: 96.2% ▲ +1.2 │ Smells: 14 ▼ -3 │ Security: N/A │
+╰─────────────────────────────────────────────────────────╯
+╭─────────────────────────────────────────────────────────╮
 │ ↑/↓ j/k  navigate │ tab  switch panel │ r  refresh │ q  quit │
 ╰─────────────────────────────────────────────────────────╯
 ```
+
+## Tooling box
+
+The box between the panels and the status bar shows three quality metrics for the watched repository. rview never runs the tools itself — it only reads report files when they exist (first match wins):
+
+| Metric | Report files | Format | How to generate |
+|--------|--------------|--------|-----------------|
+| Coverage | `coverage/.last_run.json` | SimpleCov | Run your test suite with [SimpleCov](https://github.com/simplecov-ruby/simplecov) |
+| Smells | `gl-code-quality-report.json`, `tmp/gl-code-quality-report.json` | [CodeClimate](https://docs.gitlab.com/ee/ci/testing/code_quality.html) (GitLab Code Quality) | e.g. `codeclimate analyze -f json > gl-code-quality-report.json`, or download the `codequality` artifact from your GitLab pipeline |
+| Security | `gl-sast-report.json`, `tmp/gl-sast-report.json` | [GitLab SAST](https://docs.gitlab.com/ee/user/application_security/sast/) | `semgrep scan --config auto --gitlab-sast --output gl-sast-report.json`, or download the SAST artifact from your GitLab pipeline |
+
+A missing or unparsable report shows `N/A`. Next to each value, a delta (`▲` / `▼` / `=`) compares it against the previous distinct value, persisted per repository in `$XDG_DATA_HOME/rview/` (default `~/.local/share/rview/`). The delta stays visible until the metric changes again. Green means the metric improved (coverage up, smells/security down), red means it got worse.
+
+### Configuring report paths
+
+The report locations can be overridden with a `.rview.yml` file in the root of the watched repository. Each metric accepts a single path or a list of candidate paths (relative to the repository, first existing wins); metrics not listed keep their defaults:
+
+```yaml
+tooling:
+  coverage: reports/coverage/.last_run.json
+  smells:
+    - ci/gl-code-quality-report.json
+    - gl-code-quality-report.json
+  security: reports/gl-sast-report.json
+```
+
+The file is read once at startup — restart rview after changing it.
+
+> **Tip**: if your test suite writes the SimpleCov report on every run, a partial run (a single file or example) overwrites the total with a misleading value and pollutes the delta baseline. This repository redirects SimpleCov output to `tmp/coverage-partial/` for partial runs (see `spec/spec_helper.rb`) so `coverage/.last_run.json` only reflects full-suite runs.
 
 ### Status indicators
 

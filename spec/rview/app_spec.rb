@@ -52,6 +52,34 @@ RSpec.describe Rview::App do
     end
   end
 
+  describe '#update with key r' do
+    after { app.instance_variable_get(:@watcher).stop }
+
+    it 'forces a refresh even when the watcher is clean' do
+      app.init
+      app.update(Rview::Messages::RefreshTick.new) # consumes the initial dirty flag
+      File.write(File.join(tmpdir, 'README.md'), "# changed\n")
+
+      key_msg = Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_RUNES, runes: [114])
+      app.update(key_msg)
+
+      files = app.instance_variable_get(:@file_list).files
+      expect(files.map(&:path)).to include('README.md')
+    end
+
+    it 'forces a tooling metrics re-read' do
+      app.init
+      app.update(Rview::Messages::RefreshTick.new) # consumes the initial dirty flags
+      FileUtils.mkdir_p(File.join(tmpdir, 'coverage'))
+      File.write(File.join(tmpdir, 'coverage', '.last_run.json'), '{"result":{"line":42.0}}')
+
+      key_msg = Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_RUNES, runes: [114])
+      app.update(key_msg)
+
+      expect(app.view).to include('42.0%')
+    end
+  end
+
   describe '#update with tab key' do
     let(:tab_msg) { Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_TAB) }
 
@@ -75,12 +103,37 @@ RSpec.describe Rview::App do
       expect(app.instance_variable_get(:@width)).to eq(160)
       expect(app.instance_variable_get(:@height)).to eq(50)
     end
+
+    it 'propagates the new width to the tooling box' do
+      resize_msg = Bubbletea::WindowSizeMessage.new(width: 160, height: 50)
+      app.update(resize_msg)
+      tooling_box = app.instance_variable_get(:@tooling_box)
+      expect(tooling_box.instance_variable_get(:@width)).to eq(156)
+    end
   end
 
   describe '#view' do
     it 'returns a non-empty string' do
       expect(app.view).to be_a(String)
       expect(app.view).not_to be_empty
+    end
+
+    it 'includes the tooling box labels' do
+      output = app.view
+      expect(output).to include('Coverage')
+      expect(output).to include('Smells')
+      expect(output).to include('Security')
+    end
+
+    it 'shows coverage from a SimpleCov report after a tick' do
+      FileUtils.mkdir_p(File.join(tmpdir, 'coverage'))
+      File.write(File.join(tmpdir, 'coverage', '.last_run.json'), '{"result":{"line":95.0}}')
+
+      app.init
+      app.update(Rview::Messages::RefreshTick.new)
+      app.instance_variable_get(:@watcher).stop
+
+      expect(app.view).to include('95.0%')
     end
   end
 end

@@ -56,4 +56,26 @@ RSpec.describe 'App integration', :integration do
     expect(output).to be_a(String)
     expect(output.length).to be > 0
   end
+
+  it 'renders tooling metrics from report files in the repo' do
+    File.write(File.join(tmpdir, 'app.rb'), "puts 'hello'\n")
+    system('git', '-C', tmpdir, 'add', '.', out: File::NULL)
+    system('git', '-C', tmpdir, 'commit', '-m', 'init', out: File::NULL, err: File::NULL)
+
+    FileUtils.mkdir_p(File.join(tmpdir, 'coverage'))
+    File.write(File.join(tmpdir, 'coverage', '.last_run.json'), '{"result":{"line":95.0}}')
+    File.write(File.join(tmpdir, 'gl-code-quality-report.json'), '[{},{},{},{},{},{},{}]')
+
+    app = Rview::App.new(repo_path: tmpdir, width: 120, height: 40)
+    app.init
+
+    tick = Rview::Messages::RefreshTick.new
+    app.update(tick)
+    app.instance_variable_get(:@watcher).stop
+
+    output = app.view
+    expect(output).to include('95.0%')
+    expect(output).to include('Smells: 7')
+    expect(output).to include('Security')
+  end
 end

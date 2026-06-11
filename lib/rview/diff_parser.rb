@@ -44,19 +44,15 @@ module Rview
       end
     end
 
-    def self.determine_status_code(code) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
-      x = code[0]
-      y = code[1]
+    # Status letters in display priority; the value tells whether the letter
+    # also counts when it appears in the worktree (Y) column.
+    STATUS_PRIORITY = { 'R' => true, 'D' => true, 'A' => false, 'M' => true, 'C' => false, 'U' => true }.freeze
 
+    def self.determine_status_code(code)
       return '?' if code == '??'
-      return 'R' if x == 'R' || y == 'R'
-      return 'D' if x == 'D' || y == 'D'
-      return 'A' if x == 'A'
-      return 'M' if x == 'M' || y == 'M'
-      return 'C' if x == 'C'
-      return 'U' if x == 'U' || y == 'U'
 
-      code.strip
+      letter, = STATUS_PRIORITY.find { |l, both_columns| code[0] == l || (both_columns && code[1] == l) }
+      letter || code.strip
     end
     private_class_method :determine_status_code
 
