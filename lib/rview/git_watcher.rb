@@ -52,7 +52,7 @@ module Rview
       case file_status.status_code
       when '?'
         stdout, _stderr, _status = Open3.capture3(
-          'git', 'diff', '--no-index', '/dev/null', path,
+          'git', 'diff', '--no-index', File::NULL, path,
           chdir: @repo_path
         )
         stdout
