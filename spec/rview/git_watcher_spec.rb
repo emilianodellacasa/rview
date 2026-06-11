@@ -91,6 +91,26 @@ RSpec.describe Rview::GitWatcher do
       expect(result).to be_an(Array)
     end
 
+    it 'receives events for report paths inside silenced directories' do
+      skip 'inotify timing is flaky on CI' if ENV['CI']
+
+      fired = false
+      watcher = described_class.new(tmpdir, report_paths: ['tmp/gl-sast-report.json'],
+                                            on_report_change: -> { fired = true })
+      FileUtils.mkdir_p(File.join(tmpdir, 'tmp'))
+      watcher.start
+      sleep 0.3
+
+      File.write(File.join(tmpdir, 'tmp', 'gl-sast-report.json'), '{"vulnerabilities":[]}')
+      50.times do
+        break if fired
+
+        sleep 0.1
+      end
+      watcher.stop
+      expect(fired).to be true
+    end
+
     it 'becomes dirty after a git index change' do
       skip 'inotify timing is flaky on CI' if ENV['CI']
 
@@ -109,6 +129,30 @@ RSpec.describe Rview::GitWatcher do
         sleep 0.1
       end
       expect(result).to be_an(Array)
+    end
+  end
+
+  describe 'report change notifications' do
+    it 'notifies and marks dirty when a report file changes' do
+      fired = false
+      watcher = described_class.new(tmpdir, report_paths: ['gl-sast-report.json'],
+                                            on_report_change: -> { fired = true })
+      watcher.refresh # consume the initial dirty flag
+
+      watcher.send(:handle_fs_events, [File.join(tmpdir, 'gl-sast-report.json')])
+
+      expect(fired).to be true
+      expect(watcher.refresh).to be_an(Array)
+    end
+
+    it 'does not notify for unrelated files' do
+      fired = false
+      watcher = described_class.new(tmpdir, report_paths: ['gl-sast-report.json'],
+                                            on_report_change: -> { fired = true })
+
+      watcher.send(:handle_fs_events, [File.join(tmpdir, 'foo.rb')])
+
+      expect(fired).to be false
     end
   end
 

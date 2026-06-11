@@ -66,6 +66,18 @@ RSpec.describe Rview::App do
       files = app.instance_variable_get(:@file_list).files
       expect(files.map(&:path)).to include('README.md')
     end
+
+    it 'forces a tooling metrics re-read' do
+      app.init
+      app.update(Rview::Messages::RefreshTick.new) # consumes the initial dirty flags
+      FileUtils.mkdir_p(File.join(tmpdir, 'coverage'))
+      File.write(File.join(tmpdir, 'coverage', '.last_run.json'), '{"result":{"line":42.0}}')
+
+      key_msg = Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_RUNES, runes: [114])
+      app.update(key_msg)
+
+      expect(app.view).to include('42.0%')
+    end
   end
 
   describe '#update with tab key' do

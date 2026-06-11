@@ -32,8 +32,11 @@ module Rview
       @diff_view = Components::DiffView.new(**right_outer_dims)
       @status_bar = Components::StatusBar.new(width: status_bar_inner_width)
       @tooling_box = Components::ToolingBox.new(width: status_bar_inner_width)
-      @tooling_metrics = ToolingMetrics.new(repo_path)
-      @watcher = GitWatcher.new(repo_path)
+      config = Config.load(repo_path)
+      @tooling_metrics = ToolingMetrics.new(repo_path, config: config)
+      @watcher = GitWatcher.new(repo_path,
+                                report_paths: config.all_tooling_paths,
+                                on_report_change: -> { @tooling_metrics.mark_dirty })
 
       @file_list.focus
     end
@@ -73,6 +76,7 @@ module Rview
     private
 
     def handle_tick
+      @tooling_metrics.mark_dirty if @watcher.fallback_polling?
       apply_refresh(@watcher.refresh)
       @tooling_box.metrics = @tooling_metrics.read
       [self, tick_cmd]
@@ -106,6 +110,7 @@ module Rview
         @show_info = true
       when 'r'
         apply_refresh(@watcher.refresh(force: true))
+        @tooling_box.metrics = @tooling_metrics.read(force: true)
       when 'tab'
         toggle_focus
       when 'enter'

@@ -40,7 +40,7 @@ rview /path/to/repo
 
 Must be run inside a Git repository, otherwise it will exit with an error.
 
-rview watches the filesystem (including `.git` index/HEAD/refs, so staging and commits are picked up too) and only runs `git status`/`git diff` when something actually changed. If the watcher cannot start (e.g. inotify watch limit exceeded), it transparently falls back to refreshing on every tick; `r` always forces an immediate refresh.
+rview watches the filesystem (including `.git` index/HEAD/refs, so staging and commits are picked up too) and only runs `git status`/`git diff` when something actually changed. The tooling reports follow the same rule: they are re-read only when the watcher sees them change. If the watcher cannot start (e.g. inotify watch limit exceeded), it transparently falls back to refreshing on every tick; `r` always forces an immediate refresh of both the git state and the tooling metrics.
 
 ## Keybindings
 

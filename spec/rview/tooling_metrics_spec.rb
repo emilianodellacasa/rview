@@ -72,12 +72,13 @@ RSpec.describe Rview::ToolingMetrics do
       expect(metrics.read[:coverage]).to be_nil
     end
 
-    it 'picks up new values when the report file changes' do
+    it 'picks up new values when the report file changes and it is marked dirty' do
       path = write_report('gl-code-quality-report.json', '[{},{},{}]')
       metrics.read
 
       File.write(path, '[{}]')
       FileUtils.touch(path, mtime: Time.now + 5)
+      metrics.mark_dirty
       expect(metrics.read[:smells]).to eq(previous: 3, current: 1)
     end
 
@@ -85,6 +86,24 @@ RSpec.describe Rview::ToolingMetrics do
       write_report('gl-code-quality-report.json', '[{},{},{}]')
       metrics.read
       expect(metrics.read[:smells]).to eq(previous: 3, current: 3)
+    end
+
+    it 'does not touch the filesystem again until marked dirty' do
+      path = write_report('gl-code-quality-report.json', '[{},{},{}]')
+      metrics.read
+
+      File.write(path, '[{}]')
+      FileUtils.touch(path, mtime: Time.now + 5)
+      expect(metrics.read[:smells]).to eq(previous: 3, current: 3) # cached, not re-read
+    end
+
+    it 're-reads when forced even while clean' do
+      path = write_report('gl-code-quality-report.json', '[{},{},{}]')
+      metrics.read
+
+      File.write(path, '[{}]')
+      FileUtils.touch(path, mtime: Time.now + 5)
+      expect(metrics.read(force: true)[:smells]).to eq(previous: 3, current: 1)
     end
 
     it 'reads reports from the paths configured in .rview.yml' do

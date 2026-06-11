@@ -25,6 +25,11 @@ module Rview
       @raw = raw
     end
 
+    # Every configured candidate report path, across all metrics.
+    def all_tooling_paths
+      DEFAULT_TOOLING_PATHS.keys.flat_map { |key| tooling_paths(key) }
+    end
+
     # Candidate report paths (relative to the repo) for :coverage, :smells or :security.
     # Accepts a string or an array of strings in the config; anything else falls
     # back to the defaults for that metric.

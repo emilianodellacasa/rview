@@ -9,11 +9,23 @@ module Rview
       @baseline = baseline
       @config = config
       @cache = {}
+      @last_read = {}
+      @dirty = true # the first read after construction populates the box
+      @dirty_mutex = Mutex.new
+    end
+
+    # Called (from the watcher thread) when a report file changed on disk.
+    def mark_dirty
+      @dirty_mutex.synchronize { @dirty = true }
     end
 
     # => { coverage: { previous:, current: } | nil, smells: ..., security: ... }
-    def read
-      {
+    # Returns the cached result without touching the filesystem until a
+    # report change marks it dirty (or force is given).
+    def read(force: false)
+      return @last_read unless force || take_dirty!
+
+      @last_read = {
         coverage: @baseline.update(:coverage, coverage),
         smells: @baseline.update(:smells, smells),
         security: @baseline.update(:security, security)
@@ -21,6 +33,14 @@ module Rview
     end
 
     private
+
+    def take_dirty!
+      @dirty_mutex.synchronize do
+        dirty = @dirty
+        @dirty = false
+        dirty
+      end
+    end
 
     def coverage
       parse(:coverage, @config.tooling_paths(:coverage)) do |json|
