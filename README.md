@@ -96,6 +96,8 @@ tooling:
 
 The file is read once at startup — restart rview after changing it.
 
+> **Tip**: if your test suite writes the SimpleCov report on every run, a partial run (a single file or example) overwrites the total with a misleading value and pollutes the delta baseline. This repository redirects SimpleCov output to `tmp/coverage-partial/` for partial runs (see `spec/spec_helper.rb`) so `coverage/.last_run.json` only reflects full-suite runs.
+
 ### Status indicators
 
 | Symbol | Meaning |
