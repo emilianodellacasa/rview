@@ -73,21 +73,23 @@ module Rview
     private
 
     def handle_tick
-      result = @watcher.refresh
-      if result
-        files, diffs = result
-        @file_list.update_files(files)
-        selected = @file_list.selected_file
-        if selected
-          diff_content = diffs[selected.path] || ''
-          colorized = DiffParser.colorize(diff_content)
-          @diff_view.set_diff(selected.path, colorized)
-        else
-          @diff_view.set_diff(nil, [])
-        end
-      end
+      apply_refresh(@watcher.refresh)
       @tooling_box.metrics = @tooling_metrics.read
       [self, tick_cmd]
+    end
+
+    def apply_refresh(result)
+      return unless result
+
+      files, diffs = result
+      @file_list.update_files(files)
+      selected = @file_list.selected_file
+      if selected
+        diff_content = diffs[selected.path] || ''
+        @diff_view.set_diff(selected.path, DiffParser.colorize(diff_content))
+      else
+        @diff_view.set_diff(nil, [])
+      end
     end
 
     def handle_key(msg)
@@ -102,6 +104,8 @@ module Rview
         return [self, Bubbletea.quit]
       when 'i'
         @show_info = true
+      when 'r'
+        apply_refresh(@watcher.refresh(force: true))
       when 'tab'
         toggle_focus
       when 'enter'

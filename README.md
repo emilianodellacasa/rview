@@ -4,7 +4,7 @@ A real-time TUI (Terminal User Interface) for viewing Git changes in your reposi
 
 ## Features
 
-- Real-time refresh of file list and diff on every tick
+- Event-driven refresh via filesystem watching (listen/inotify): near-zero CPU when idle, changes appear within ~0.5s
 - Colorized diff view for each modified file
 - Keyboard navigation and mouse support
 - Two-panel layout: file list | diff
@@ -39,6 +39,8 @@ rview /path/to/repo
 ```
 
 Must be run inside a Git repository, otherwise it will exit with an error.
+
+rview watches the filesystem (including `.git` index/HEAD/refs, so staging and commits are picked up too) and only runs `git status`/`git diff` when something actually changed. If the watcher cannot start (e.g. inotify watch limit exceeded), it transparently falls back to refreshing on every tick; `r` always forces an immediate refresh.
 
 ## Keybindings
 

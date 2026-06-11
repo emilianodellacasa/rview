@@ -52,6 +52,22 @@ RSpec.describe Rview::App do
     end
   end
 
+  describe '#update with key r' do
+    after { app.instance_variable_get(:@watcher).stop }
+
+    it 'forces a refresh even when the watcher is clean' do
+      app.init
+      app.update(Rview::Messages::RefreshTick.new) # consumes the initial dirty flag
+      File.write(File.join(tmpdir, 'README.md'), "# changed\n")
+
+      key_msg = Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_RUNES, runes: [114])
+      app.update(key_msg)
+
+      files = app.instance_variable_get(:@file_list).files
+      expect(files.map(&:path)).to include('README.md')
+    end
+  end
+
   describe '#update with tab key' do
     let(:tab_msg) { Bubbletea::KeyMessage.new(key_type: Bubbletea::KeyMessage::KEY_TAB) }
 
