@@ -1,5 +1,15 @@
 # frozen_string_literal: true
 
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/spec/'
+end
+
+require 'tmpdir'
+
+# Isolate persisted tooling baselines from the real ~/.local/share during specs.
+ENV['XDG_DATA_HOME'] = Dir.mktmpdir('rview-spec-data')
+
 require 'rview'
 
 RSpec.configure do |config|

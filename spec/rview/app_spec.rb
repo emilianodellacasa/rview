@@ -75,12 +75,37 @@ RSpec.describe Rview::App do
       expect(app.instance_variable_get(:@width)).to eq(160)
       expect(app.instance_variable_get(:@height)).to eq(50)
     end
+
+    it 'propagates the new width to the tooling box' do
+      resize_msg = Bubbletea::WindowSizeMessage.new(width: 160, height: 50)
+      app.update(resize_msg)
+      tooling_box = app.instance_variable_get(:@tooling_box)
+      expect(tooling_box.instance_variable_get(:@width)).to eq(156)
+    end
   end
 
   describe '#view' do
     it 'returns a non-empty string' do
       expect(app.view).to be_a(String)
       expect(app.view).not_to be_empty
+    end
+
+    it 'includes the tooling box labels' do
+      output = app.view
+      expect(output).to include('Coverage')
+      expect(output).to include('Smells')
+      expect(output).to include('Security')
+    end
+
+    it 'shows coverage from a SimpleCov report after a tick' do
+      FileUtils.mkdir_p(File.join(tmpdir, 'coverage'))
+      File.write(File.join(tmpdir, 'coverage', '.last_run.json'), '{"result":{"line":95.0}}')
+
+      app.init
+      app.update(Rview::Messages::RefreshTick.new)
+      app.instance_variable_get(:@watcher).stop
+
+      expect(app.view).to include('95.0%')
     end
   end
 end

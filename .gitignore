@@ -57,3 +57,7 @@ build-iPhoneSimulator/
 
 # IDE
 /.idea/
+
+# Tooling reports read by the rview tooling box
+/gl-code-quality-report.json
+/gl-sast-report.json

@@ -30,6 +30,10 @@ module Rview
     MANTLE    = '#181825'
     CRUST     = '#11111b'
 
+    # Outside the Catppuccin palette: the theme RED is a salmon pink that does
+    # not read as "red" for worsening metric deltas, so we use a vivid red.
+    STRONG_RED = '#ff5555'
+
     def self.file_list_style
       { border: :rounded, border_fg: OVERLAY1, padding: [0, 1] }
     end
